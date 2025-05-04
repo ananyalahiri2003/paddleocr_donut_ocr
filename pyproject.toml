@@ -1,0 +1,34 @@
+[tool.poetry]
+name = "paddleocr-donut-ocr"
+version = "0.1.0"
+description = "An OCR app with PAddleOCR and donut models"
+authors = ["ananyalahiri2003 <ananyalahiri2003@yahoo.co.uk>"]
+license = "MIT"
+readme = "README.md"
+packages = [
+    {"include" = "src", "from" = "."}
+]
+
+[tool.poetry.dependencies]
+python              = ">3.10, <3.13"
+streamlit           = "^1.21.0"
+torch               = "2.2.1"
+accelerate          = "^0.21.0"
+transformers        = { version = "4.51.3", extras = ['sentencepiece'] }
+huggingface-hub     = ">0.10.0,<1.0"
+Pillow              = "^10.0.0"
+python-dotenv       = "^1.0.0"
+pyngrok             = "^6.1.0"
+numpy               = ">1.21,<2.0"
+layoutparser        = "0.3.4"
+camelot-py          = "1.0.0"
+paddleocr           = "2.10.0"
+paddlepaddle        = "3.0.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+
+
+
