@@ -9,6 +9,7 @@ from PIL import Image
 from dotenv import load_dotenv
 import logging
 from datetime import datetime
+from paddleocr import PaddleOCR
 
 
 # Set up logging
@@ -35,7 +36,7 @@ except ImportError:
 
 # Import for PAddleOCR
 try:
-    from paddleocr import paddlepaddle
+    from paddleocr import PaddleOCR
     paddleocr_available = True
 except ImportError:
     paddleocr_available = False

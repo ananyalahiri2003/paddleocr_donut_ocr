@@ -24,6 +24,7 @@ layoutparser        = "0.3.4"
 camelot-py          = "1.0.0"
 paddleocr           = "2.10.0"
 paddlepaddle        = "3.0.0"
+setuptools          = "^68.0.0"
 
 [build-system]
 requires = ["poetry-core"]
