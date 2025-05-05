@@ -1,6 +1,8 @@
 import cv2
 import streamlit as st
+import json
 import os
+import re
 import time
 import numpy as np
 import torch
@@ -173,6 +175,60 @@ def process_single_image_paddleocr(image, device="cpu", print_conf=False):
     }
 
 
+def process_single_image_donut(image, device="cpu", print_conf=False):
+    """Process a single image using Donut"""
+    global donut_processor, donut_model
+
+    start_time = time.time()
+
+    # Load the model if not already loaded
+    donut_processor, donut_model = load_donut_model(device)
+
+    # Optimize image
+    image = optimize_image(image)
+
+    # Prepare pixel values
+    pixel_values = donut_processor(np.array(image), return_tensors="pt").pixel_values.to(device)
+
+    # Generate structured output
+    task_prompt = "<s_document>"
+    decoder_input_ids = donut_processor.tokenizer(
+        task_prompt,
+        add_special_tokens=False,
+        return_tensors="pt",
+    ).input_ids.to(device)
+
+    # Generate autoregressively with decoder_input_ids and proper special tokens
+    outputs = donut_model.generate(
+        pixel_values,
+        decoder_input_ids=decoder_input_ids,
+        max_length=donut_model.config.decoder.max_position_embeddings,
+        pad_token_id=donut_processor.tokenizer.pad_token_id,
+        eos_token_id=donut_processor.tokenizer.eos_token_id,
+        use_cache=True,
+        bad_words_ids=[[donut_processor.tokenizer.unk_token_id]],
+        return_dict_in_generate=True,
+    )
+
+    # Decode, strip out special tokens, and remove the prompt token itself
+    sequence = donut_processor.batch_decode(outputs.sequences)[0]
+    sequence = sequence.replace(donut_processor.tokenizer.eos_token, "")
+    sequence = sequence.replace(donut_processor.tokenizer.pad_token, "")
+    # remove the first <s_*> prompt tag
+    sequence = re.sub(r"<.*?>", "", sequence, count=1).strip()
+
+    json_output = donut_processor.token2json(sequence)
+
+    # Compute elapsed time
+    processing_time = time.time() - start_time
+
+    return {
+        "text": sequence,
+        "json": json_output,
+        "processing_time": processing_time,
+    }
+
+
 def save_session_history(results):
     """Save processing results to session history"""
     if 'history' not in st.session_state:
@@ -272,6 +328,9 @@ def main():
     # Create sidebar
     with st.sidebar:
         st.header("Configuration")
+        # OCR engine
+        st.subheader("OCR Engine")
+        ocr_engine = st.selectbox("Choose engine", ["PaddleOCR", "Donut"])
 
         # Device selection
         st.subheader("Processing Device")
@@ -312,13 +371,13 @@ def main():
 
         # Advanced options
         with st.expander("Advanced Options"):
-            task_type = st.selectbox(
-                "Select task type",
-                [
-                    "Convert this page using PaddleOCR.",
-                    "Convert this page using Donut.",
-                ]
-            )
+            # task_type = st.selectbox(
+            #     "Select task type",
+            #     [
+            #         "Convert this page using PaddleOCR.",
+            #         "Convert this page using Donut.",
+            #     ]
+            # )
 
             # custom_prompt = st.text_area(
             #     "Custom prompt (optional)",
@@ -400,7 +459,11 @@ def main():
                 # Update global optimization settings
                 optimize_image.func_defaults = (max_image_size,)
 
-                result = process_single_image_paddleocr(image, device)
+                if ocr_engine == "PaddleOCR":
+                    result = process_single_image_paddleocr(image, device)
+                else:
+                    result = process_single_image_donut(image, device)
+
                 st.session_state.results = [result]
 
                 # Save to history
@@ -425,8 +488,8 @@ def main():
                     st.text_area("OCR JSON", result["json"], height=300)
                     st.download_button(
                         "Download JSON",
-                        result["json"],
-                        file_name = "output.json"
+                        result['json'],
+                        file_name="output.json"
                         )
 
                 st.success(f"Processing completed in {result['processing_time']:.2f} seconds on {selected_device}")
