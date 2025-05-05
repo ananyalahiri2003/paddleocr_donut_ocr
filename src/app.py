@@ -91,7 +91,7 @@ def load_paddleocr_model(_device):
             use_angle_cls=True,
             lang="en",
             use_gpu=torch.cuda.is_available(),
-        ).to(_device)
+        )
         logger.info("PaddleOCR Model loaded successfully.")
         return paddleocr_model
     except Exception as e:
@@ -159,7 +159,18 @@ def process_single_image_paddleocr(image, device="cpu", print_conf=False):
             lines.append(text)
             if print_conf:
                 print(f"{text}: {conf}")
-    return "\n".join(lines)
+
+    # Compute elapsed time
+    processing_time = time.time() - start_time
+    plain_text = "\n".join(lines)
+    # TODO: replace `json_output` with any JSON serialization if you like.
+    json_output = plain_text
+
+    return {
+        "text": plain_text,
+        "json": json_output,
+        "processing_time": processing_time,
+    }
 
 
 def save_session_history(results):
@@ -244,7 +255,7 @@ def main():
     """, unsafe_allow_html=True)
 
     # App header
-    st.markdown('<p class="main-header">PAddleOCR and Donut OCR App</p>', unsafe_allow_html=True)
+    st.markdown('<p class="main-header">PaddleOCR and Donut OCR App</p>', unsafe_allow_html=True)
     st.markdown('<p class="sub-header">Extract text from images using PaddleOCR or Donut</p>', unsafe_allow_html=True)
 
     # Check dependencies
@@ -409,14 +420,14 @@ def main():
                         file_name="output.txt"
                     )
 
-                with tabs[3]:
-                    st.subheader("HTML Output")
-                    st.code(result["JSON"], language="html")
+                with tabs[1]:
+                    st.subheader("JSON Output")
+                    st.text_area("OCR JSON", result["json"], height=300)
                     st.download_button(
-                        "Download HTML",
-                        result["JSON"],
-                        file_name="output.html"
-                    )
+                        "Download JSON",
+                        result["json"],
+                        file_name = "output.json"
+                        )
 
                 st.success(f"Processing completed in {result['processing_time']:.2f} seconds on {selected_device}")
             except Exception as e:
